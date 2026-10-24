@@ -1,0 +1,14 @@
+node_modules/
+.env
+.env.*
+!.env.example
+wallet/
+*.pem
+*.p12
+*.sso
+*.key
+*.jks
+*.ora
+coverage/
+.runtime/
+*.seed.json

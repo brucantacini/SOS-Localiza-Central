@@ -1,0 +1,18 @@
+{
+  "name": "sos-localiza-api",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "db:setup": "node --env-file-if-exists=.env scripts/setup-oracle.mjs",
+    "db:migrate": "node --env-file=.env scripts/setup-oracle.mjs --operators-only",
+    "operators:prepare": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/operator-input.ps1",
+    "operators:seed": "node --env-file=.env scripts/seed-operators.mjs",
+    "test:auth:oracle": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/operator-input.ps1 -TestLogin",
+    "start": "node --env-file-if-exists=.env server.mjs",
+    "test": "node --test test/*.test.mjs",
+    "test:oracle": "node --env-file-if-exists=.env test/oracle-integration.mjs",
+    "test:e2e": "node --env-file-if-exists=.env test/browser-oracle.mjs"
+  },
+  "engines": { "node": ">=22" },
+  "dependencies": { "oracledb": "^6.10.0" }
+}

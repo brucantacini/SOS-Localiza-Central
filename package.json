@@ -1,0 +1,9 @@
+{
+  "name": "sos-localiza-central",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": { "dev": "vite --host 127.0.0.1 --port 5174 --strictPort", "api:start": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File backend/scripts/start-background.ps1", "api:restart": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File backend/scripts/start-background.ps1 -Restart", "build": "tsc -b && vite build", "preview": "vite preview --host 127.0.0.1 --port 5174 --strictPort" },
+  "dependencies": { "react": "^18.3.1", "react-dom": "^18.3.1", "leaflet": "^1.9.4" },
+  "devDependencies": { "@types/react": "^18.3.12", "@types/react-dom": "^18.3.1", "@types/leaflet": "^1.9.22", "typescript": "~5.6.2", "vite": "^7.3.7", "@vitejs/plugin-react": "^5.2.0" }
+}

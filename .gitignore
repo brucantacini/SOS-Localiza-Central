@@ -1,0 +1,12 @@
+node_modules/
+.npm-cache/
+dist/
+.env
+.env.*
+!.env.example
+*.local
+*.tsbuildinfo
+backend/wallet/
+*.pem
+*.p12
+*.sso
