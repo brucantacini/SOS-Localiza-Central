@@ -16,9 +16,10 @@ const rewrite = path => {
   for (const [key, value] of url.searchParams) target.searchParams.append(key, value);
   return target.pathname + target.search;
 };
-async function withDeployment(store, run, parsed = false, queryOnly = false) {
+async function withDeployment(store, run, parsed = false, queryOnly = false, captureMetadata = false) {
   const handler = vercelAdapter(apiHandler({ findSession: async () => ({ username: 'test', mustChangePassword: false }), ...store }, { VERCEL: '1', CORS_ORIGINS: 'https://centralsoslocaliza.vercel.app' }));
   const server = createServer(async (req, res) => {
+    if (captureMetadata) { const url = new URL(req.url, 'http://localhost'); req.query = { ...Object.fromEntries(url.searchParams), path: url.searchParams.get('__sos_route').slice(3).split('/') }; }
     if (queryOnly) { const url = new URL(req.url, 'http://localhost'); req.query = Object.fromEntries(url.searchParams); req.url = url.pathname; }
     if (parsed && ['POST', 'PATCH'].includes(req.method)) {
       const chunks = []; for await (const chunk of req) chunks.push(chunk);
@@ -62,6 +63,24 @@ test('runtime query helper preserves REST path and filters when req.url has no q
     const response = await fetch(base + rewrite('/api/v1/alerts?q=Teste&page=3'), { headers: { Cookie: 'sos_operator_session=' + 'a'.repeat(64) } });
     assert.equal(response.status, 200); const body = await response.json(); assert.equal(body.filters.q, 'Teste'); assert.equal(body.filters.page, 3);
   }, false, true);
+});
+test('Vercel source capture metadata is not passed to alert filter validation', async () => {
+  await withDeployment({ list: async filters => ({ data: [], filters }) }, async base => {
+    const headers = { Cookie: 'sos_operator_session=' + 'a'.repeat(64) };
+    const response = await fetch(base + rewrite('/api/v1/alerts?page=1&pageSize=25'), { headers });
+    assert.equal(response.status, 200); const body = await response.json(); assert.equal(body.filters.pageSize, 25); assert.equal(body.filters.path, undefined);
+  }, false, false, true);
+});
+test('source metadata in rewritten URL is stripped but unknown client filters still fail', async () => {
+  await withDeployment({ list: async filters => ({ data: [], filters }) }, async base => {
+    const headers = { Cookie: 'sos_operator_session=' + 'a'.repeat(64) };
+    const valid = await fetch(base + rewrite('/api/v1/alerts?pageSize=25') + '&path=alerts', { headers });
+    assert.equal(valid.status, 200);
+    for (const query of ['path=unrelated', 'unknown=anything']) {
+      const invalid = await fetch(base + rewrite('/api/v1/alerts?' + query), { headers });
+      assert.equal(invalid.status, 400); assert.equal((await invalid.json()).error.fields.query, 'Filtro desconhecido.');
+    }
+  });
 });
 test('Vercel parsed PATCH supports status updates and still requires CSRF header', async () => {
   await withDeployment({ update: async (_id, value) => value }, async base => {

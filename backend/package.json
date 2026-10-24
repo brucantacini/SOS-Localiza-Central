@@ -12,6 +12,7 @@
     "test": "node --test test/*.test.mjs",
     "test:oracle": "node --env-file-if-exists=.env test/oracle-integration.mjs",
     "test:vercel:oracle": "node --env-file-if-exists=.env test/vercel-oracle.mjs",
+    "test:vercel:live": "node --env-file-if-exists=.env test/vercel-live.mjs",
     "test:e2e": "node --env-file-if-exists=.env test/browser-oracle.mjs"
   },
   "engines": { "node": ">=22" },

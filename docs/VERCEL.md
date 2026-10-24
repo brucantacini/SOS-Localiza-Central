@@ -66,8 +66,14 @@ Diagnóstico: HTML 404 = função/rota ou deploy ainda incorreto; 503 JSON = fun
 ## Validação disponível
 
 - Build Vite/TypeScript e consistência do lockfile com o driver Oracle da raiz validados.
-- 23 testes unitários/HTTP passaram, incluindo reescrita da configuração, sessão sem login, filtros em URL e helper query, POST/PATCH com JSON pré-processado, limites de corpo e cookie Secure na Vercel.
+- 25 testes unitários/HTTP passaram, incluindo reescrita da configuração, metadados de captura da Vercel, sessão sem login, filtros em URL e helper query, POST/PATCH com JSON pré-processado, limites de corpo e cookie Secure na Vercel.
 - `npm run test:vercel:oracle` passou em `backend`: adaptador local com Oracle real, login, COMMIT visível em outra conexão, repetição sem duplicar, filtros, PATCH e conflito de versão. Não substitui verificar o deploy publicado.
 - A verificação cloud depende do redeploy e das variáveis no projeto da sua conta Vercel; os testes locais não são apresentados como publicação concluída.
+
+### Erro 400 após autenticar
+
+O runtime pode acrescentar a captura `:path*` do rewrite como `path` no helper de query ou na URL encaminhada. Isso é metadado de roteamento e não um filtro de alertas. O adaptador remove essa captura somente quando corresponde à rota REST capturada, antes de chamar a validação compartilhada. Filtros desconhecidos enviados pelo cliente continuam retornando 400. Testes cobrem esse comportamento para evitar aprovação apenas com URLs locais sem os metadados reais do runtime.
+
+Para verificar a versão publicada com Oracle real, execute `npm run test:vercel:live` em `backend`. O teste consulta health, faz login com um operador temporário, consulta alertas sem imprimir dados pessoais e encerra a sessão. A conta temporária é removida ao final. A URL padrão é a Central identificada; `API_BASE_URL` permite usar outro deploy, incluindo o sufixo `/api/v1`.
 
 Referências oficiais: [Vite e funções](https://vercel.com/docs/frameworks/frontend/vite), [runtime Node](https://vercel.com/docs/functions/runtimes/node-js), [configuração de rewrites](https://vercel.com/docs/routing/rewrites), [versões Node](https://vercel.com/docs/functions/runtimes/node-js/node-js-versions).
