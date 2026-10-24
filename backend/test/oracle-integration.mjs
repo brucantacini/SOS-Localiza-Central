@@ -2,14 +2,16 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { oracleStore } from '../oracle.mjs';
-import { apiServer } from '../http.mjs';
+import { createServer } from 'node:http';
+import { apiHandler, apiServer } from '../http.mjs';
+import { vercelAdapter } from '../vercel.mjs';
 import { testOperator } from './support/operator.mjs';
 if (!process.env.ORACLE_USER || !process.env.ORACLE_PASSWORD || !process.env.ORACLE_CONNECT_STRING) {
   console.error('BLOQUEADO: configure a conexão Oracle no backend. Nenhuma persistência real foi testada.');
   process.exit(1);
 }
 const store = oracleStore();
-const server = apiServer(store);
+const server = process.env.SOS_TEST_VERCEL === '1' ? createServer(vercelAdapter(apiHandler(store))) : apiServer(store);
 await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
 const base = `http://127.0.0.1:${server.address().port}/api/v1`;
 const headers = { 'Content-Type': 'application/json', 'X-SOS-Client': 'central' };
@@ -36,7 +38,7 @@ try {
   assert.equal(patched.status, 200); assert.equal((await patched.json()).data.version, 2);
   const stale = await fetch(base + '/alerts/' + alert.id + '/status', { method: 'PATCH', headers, body: JSON.stringify({ status: 'resolvido', expectedVersion: 1 }) });
   assert.equal(stale.status, 409);
-  console.log(`APROVADO: POST, COMMIT visível em outra conexão, idempotência, filtros, PATCH e concorrência. Registro de teste preservado: ${alert.id}`);
+  console.log(`APROVADO${process.env.SOS_TEST_VERCEL === '1' ? ' (adaptador Vercel local)' : ''}: POST, COMMIT visível em outra conexão, idempotência, filtros, PATCH e concorrência. Registro de teste preservado: ${alert.id}`);
 } finally {
   if (operator) await operator.cleanup(); await new Promise(resolve => server.close(resolve)); await store.close();
 }

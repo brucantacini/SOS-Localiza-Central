@@ -3,6 +3,13 @@ import { authService } from './auth.mjs';
 import { ApiError, createInput, listInput, statusInput, uuid } from './validation.mjs';
 
 async function body(req) {
+  if (Number(req.headers['content-length']) > 16384) throw new ApiError(413, 'PAYLOAD_TOO_LARGE', 'Corpo acima de 16 KiB.');
+  // Vercel may provide an already parsed body instead of a readable stream.
+  if (req.body !== undefined) {
+    const raw = Buffer.isBuffer(req.body) ? req.body.toString('utf8') : typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
+    if (Buffer.byteLength(raw) > 16384) throw new ApiError(413, 'PAYLOAD_TOO_LARGE', 'Corpo acima de 16 KiB.');
+    try { return JSON.parse(raw); } catch { throw new ApiError(400, 'VALIDATION_ERROR', 'JSON inválido.'); }
+  }
   let size = 0; const chunks = [];
   for await (const chunk of req) {
     size += chunk.length;
@@ -12,16 +19,16 @@ async function body(req) {
   try { return JSON.parse(Buffer.concat(chunks).toString('utf8')); }
   catch { throw new ApiError(400, 'VALIDATION_ERROR', 'JSON inválido.'); }
 }
-export function apiServer(store, env = process.env) {
+export function apiHandler(store, env = process.env) {
   const auth = authService(store);
   const cookieName = 'sos_operator_session';
-  const cookie = token => `${cookieName}=${token}; HttpOnly; Path=/api/v1; SameSite=Strict; Max-Age=${token ? 28800 : 0}${env.SESSION_COOKIE_SECURE === 'true' || env.NODE_ENV === 'production' ? '; Secure' : ''}`;
+  const cookie = token => `${cookieName}=${token}; HttpOnly; Path=/api/v1; SameSite=Strict; Max-Age=${token ? 28800 : 0}${env.SESSION_COOKIE_SECURE === 'true' || env.NODE_ENV === 'production' || env.VERCEL === '1' ? '; Secure' : ''}`;
   const tokenOf = req => (req.headers.cookie || '').split(';').map(s => s.trim()).find(s => s.startsWith(cookieName + '='))?.slice(cookieName.length + 1) || '';
   const origins = (env.CORS_ORIGINS || 'http://localhost:5173,http://localhost:5174,http://127.0.0.1:5173,http://127.0.0.1:5174').split(',').map(s => s.trim());
   function sameOrigin(req) {
     if ((req.headers.origin && !origins.includes(req.headers.origin)) || req.headers['x-sos-client'] !== 'central') throw new ApiError(403, 'FORBIDDEN', 'Requisição não autorizada.');
   }
-  return createServer(async (req, res) => {
+  return async (req, res) => {
     const send = (status, data) => { res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8' }); res.end(JSON.stringify(data)); };
     res.setHeader('Cache-Control', 'no-store');
     res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -36,7 +43,9 @@ export function apiServer(store, env = process.env) {
     try {
       const url = new URL(req.url, 'http://localhost'); const path = url.pathname;
       if (req.method === 'POST' && path === '/api/v1/auth/login') {
-        sameOrigin(req); const result = await auth.login(await body(req), req.socket.remoteAddress);
+        sameOrigin(req);
+        const clientIp = env.VERCEL === '1' && typeof req.headers['x-forwarded-for'] === 'string' ? req.headers['x-forwarded-for'].split(',')[0].trim() : req.socket?.remoteAddress || 'unknown';
+        const result = await auth.login(await body(req), clientIp);
         res.setHeader('Set-Cookie', cookie(result.token)); send(200, { data: { operator: result.operator, expiresAt: result.expiresAt } }); return;
       }
       if (req.method === 'GET' && path === '/api/v1/auth/session') { send(200, { data: { operator: await auth.session(tokenOf(req)) } }); return; }
@@ -64,5 +73,6 @@ export function apiServer(store, env = process.env) {
       if (!known) console.error('HTTP operation failed');
       send(known ? error.status : 500, { error: { code: known ? error.code : 'INTERNAL_ERROR', message: known ? error.message : 'Não foi possível concluir a operação.', ...(known && error.fields ? { fields: error.fields } : {}) } });
     }
-  });
+  };
 }
+export function apiServer(store, env = process.env) { return createServer(apiHandler(store, env)); }

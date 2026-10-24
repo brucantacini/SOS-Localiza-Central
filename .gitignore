@@ -10,3 +10,4 @@ backend/wallet/
 *.pem
 *.p12
 *.sso
+.vercel/

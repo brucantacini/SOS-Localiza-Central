@@ -2,6 +2,10 @@
 
 Painel React/TypeScript separado: resumo, mapa, lista, filtros, detalhes e atendimento pela [API compartilhada](docs/API.md), sem dados fixos ou fallback em memória.
 
+## Deploy na Vercel
+
+Frontend e API são publicados juntos neste repositório: `api/index.mjs` exporta o backend compartilhado e `vercel.json` encaminha `/api/v1/*` à função Node. Configure a raiz do repositório como Root Directory, as variáveis Oracle privadas na Vercel e faça redeploy. A Central usa `/api/v1`; o app principal usa a URL HTTPS pública da Central seguida de `/api/v1`. Configuração completa e diagnóstico do 404 em [VERCEL.md](docs/VERCEL.md).
+
 ## Executar
 
 Requer Node.js 20.19+ ou 22.12+ e npm.

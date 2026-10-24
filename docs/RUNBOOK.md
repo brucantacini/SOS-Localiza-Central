@@ -1,5 +1,7 @@
 # Executar e testar SOS Localiza + Central
 
+Para publicar o frontend e o backend juntos na Vercel, siga [VERCEL.md](./VERCEL.md). O proxy Vite descrito abaixo serve apenas ao desenvolvimento local; em produção as rotas são atendidas pela função `api/index.mjs`.
+
 ## Entrega e limite atual
 
 Dois agentes implementaram separadamente app e painel; o coordenador definiu primeiro o [contrato v1](./API.md), implementou API/Oracle e revisou a integração. Responsabilidades em [ORCHESTRATION.md](./ORCHESTRATION.md).
